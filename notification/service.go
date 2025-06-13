@@ -7,36 +7,35 @@ import (
 	"github.com/mi-24v/miwkey-extension/model"
 )
 
-// Store defines the interface for notification storage operations with generics
-type Store[T model.Notification] interface {
-	Create(ctx context.Context, notification T) error
-	List(ctx context.Context, userId string) ([]T, error)
-	Get(ctx context.Context, id string) (T, error)
-	Update(ctx context.Context, id string, isRead bool) error
-	Delete(ctx context.Context, id string) error
+type Service[T model.Notification] interface {
+	CreateNotification(ctx context.Context, notification T) (T, error)
+	GetNotifications(ctx context.Context, userId string) ([]T, error)
+	GetNotification(ctx context.Context, id string) (T, error)
+	UpdateNotification(ctx context.Context, id string, isRead bool) (T, error)
+	DeleteNotification(ctx context.Context, id string) error
 }
 
-// Service handles notification business logic
-type Service[T model.Notification] struct {
+// ServiceImpl handles notification business logic
+type ServiceImpl[T model.Notification] struct {
 	notificationStore Store[T]
 }
 
 // NewService creates a new notification service
-func NewService[T model.Notification]() *Service[T] {
+func NewService[T model.Notification]() *ServiceImpl[T] {
 	// For now, return a service with nil store
 	// In a real implementation, you would inject a proper store
-	return &Service[T]{
+	return &ServiceImpl[T]{
 		notificationStore: nil,
 	}
 }
 
 // SetStore sets the notification store for the service
-func (s *Service[T]) SetStore(store Store[T]) {
+func (s *ServiceImpl[T]) SetStore(store Store[T]) {
 	s.notificationStore = store
 }
 
 // CreateNotification creates a new notification
-func (s *Service[T]) CreateNotification(ctx context.Context, notification T) (T, error) {
+func (s *ServiceImpl[T]) CreateNotification(ctx context.Context, notification T) (T, error) {
 	var empty T
 	if s.notificationStore == nil {
 		return empty, errors.New("notification store not initialized")
@@ -51,7 +50,7 @@ func (s *Service[T]) CreateNotification(ctx context.Context, notification T) (T,
 }
 
 // GetNotifications retrieves all notifications for a user
-func (s *Service[T]) GetNotifications(ctx context.Context, userId string) ([]T, error) {
+func (s *ServiceImpl[T]) GetNotifications(ctx context.Context, userId string) ([]T, error) {
 	if s.notificationStore == nil {
 		return nil, errors.New("notification store not initialized")
 	}
@@ -60,7 +59,7 @@ func (s *Service[T]) GetNotifications(ctx context.Context, userId string) ([]T, 
 }
 
 // GetNotification retrieves a specific notification by ID
-func (s *Service[T]) GetNotification(ctx context.Context, id string) (T, error) {
+func (s *ServiceImpl[T]) GetNotification(ctx context.Context, id string) (T, error) {
 	var empty T
 	if s.notificationStore == nil {
 		return empty, errors.New("notification store not initialized")
@@ -70,7 +69,7 @@ func (s *Service[T]) GetNotification(ctx context.Context, id string) (T, error) 
 }
 
 // UpdateNotification updates a notification (currently only supports marking as read)
-func (s *Service[T]) UpdateNotification(ctx context.Context, id string, isRead bool) (T, error) {
+func (s *ServiceImpl[T]) UpdateNotification(ctx context.Context, id string, isRead bool) (T, error) {
 	var empty T
 	if s.notificationStore == nil {
 		return empty, errors.New("notification store not initialized")
@@ -85,7 +84,7 @@ func (s *Service[T]) UpdateNotification(ctx context.Context, id string, isRead b
 }
 
 // DeleteNotification deletes a notification by ID
-func (s *Service[T]) DeleteNotification(ctx context.Context, id string) error {
+func (s *ServiceImpl[T]) DeleteNotification(ctx context.Context, id string) error {
 	if s.notificationStore == nil {
 		return errors.New("notification store not initialized")
 	}

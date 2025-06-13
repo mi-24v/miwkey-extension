@@ -28,11 +28,14 @@ func main() {
 	// Initialize notification service with BaseNotification as the generic type
 	notificationService := notification.NewService[model.BaseNotification]()
 
-	// Register DynamoDB store with the service
-	err := dynamo.RegisterNotificationStore(context.Background(), notificationService)
+	// Initialize DynamoDB store
+	store, err := dynamo.InitDynamoDB[model.BaseNotification](context.Background())
 	if err != nil {
-		e.Logger.Fatalf("Failed to register notification store: %v", err)
+		e.Logger.Fatalf("Failed to initialize DynamoDB store: %v", err)
 	}
+
+	// Register store with service
+	notification.RegisterStore(notificationService, store)
 
 	// Register handlers
 	notification.RegisterHandlers[model.BaseNotification](e, notificationService)

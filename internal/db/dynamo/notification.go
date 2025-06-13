@@ -12,22 +12,22 @@ import (
 	"github.com/mi-24v/miwkey-extension/notification"
 )
 
-// NotificationStore implements the notification.Store interface for DynamoDB
-type NotificationStore[T model.Notification] struct {
+// NotificationStoreImpl implements the notification.Store interface for DynamoDB
+type NotificationStoreImpl[T model.Notification] struct {
 	client    *dynamodb.Client
 	tableName string
 }
 
 // NewNotificationStore creates a new DynamoDB notification store
-func NewNotificationStore[T model.Notification](client *dynamodb.Client, tableName string) *NotificationStore[T] {
-	return &NotificationStore[T]{
+func NewNotificationStore[T model.Notification](client *dynamodb.Client, tableName string) *NotificationStoreImpl[T] {
+	return &NotificationStoreImpl[T]{
 		client:    client,
 		tableName: tableName,
 	}
 }
 
 // Create stores a new notification in DynamoDB
-func (s *NotificationStore[T]) Create(ctx context.Context, notification T) error {
+func (s *NotificationStoreImpl[T]) Create(ctx context.Context, notification T) error {
 	// Convert notification to a map for DynamoDB
 	item, err := attributevalue.MarshalMap(notification)
 	if err != nil {
@@ -47,7 +47,7 @@ func (s *NotificationStore[T]) Create(ctx context.Context, notification T) error
 }
 
 // List retrieves all notifications for a user from DynamoDB
-func (s *NotificationStore[T]) List(ctx context.Context, userId string) ([]T, error) {
+func (s *NotificationStoreImpl[T]) List(ctx context.Context, userId string) ([]T, error) {
 	// Query DynamoDB for notifications for this user
 	// Note: This assumes a GSI on userId
 	result, err := s.client.Query(ctx, &dynamodb.QueryInput{
@@ -76,7 +76,7 @@ func (s *NotificationStore[T]) List(ctx context.Context, userId string) ([]T, er
 }
 
 // Get retrieves a specific notification by ID from DynamoDB
-func (s *NotificationStore[T]) Get(ctx context.Context, id string) (T, error) {
+func (s *NotificationStoreImpl[T]) Get(ctx context.Context, id string) (T, error) {
 	var empty T
 
 	// Get the notification from DynamoDB
@@ -91,7 +91,10 @@ func (s *NotificationStore[T]) Get(ctx context.Context, id string) (T, error) {
 	}
 
 	if result.Item == nil {
-		return empty, nil
+		return empty, &notification.NotFoundError{
+			Resource: "Notification",
+			ID:       id,
+		}
 	}
 
 	// Unmarshal the item into a notification
@@ -104,7 +107,7 @@ func (s *NotificationStore[T]) Get(ctx context.Context, id string) (T, error) {
 }
 
 // Update updates a notification in DynamoDB (currently only supports marking as read)
-func (s *NotificationStore[T]) Update(ctx context.Context, id string, isRead bool) error {
+func (s *NotificationStoreImpl[T]) Update(ctx context.Context, id string, isRead bool) error {
 	// Update the notification in DynamoDB
 	_, err := s.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: aws.String(s.tableName),
@@ -124,7 +127,7 @@ func (s *NotificationStore[T]) Update(ctx context.Context, id string, isRead boo
 }
 
 // Delete deletes a notification from DynamoDB
-func (s *NotificationStore[T]) Delete(ctx context.Context, id string) error {
+func (s *NotificationStoreImpl[T]) Delete(ctx context.Context, id string) error {
 	// Delete the notification from DynamoDB
 	_, err := s.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		TableName: aws.String(s.tableName),
@@ -137,9 +140,4 @@ func (s *NotificationStore[T]) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
-}
-
-// Register registers the notification store with the notification service
-func (s *NotificationStore[T]) Register(service *notification.Service[T]) {
-	service.SetStore(s)
 }
