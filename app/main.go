@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/mi-24v/miwkey-extension/internal/db/dynamo"
@@ -28,11 +30,23 @@ func main() {
 	// Initialize notification service with BaseNotification as the generic type
 	notificationService := notification.NewService[model.BaseNotification]()
 
-	// Initialize DynamoDB store
-	store, err := dynamo.InitDynamoDB[model.BaseNotification](context.Background())
+	// Load AWS configuration
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
-		e.Logger.Fatalf("Failed to initialize DynamoDB store: %v", err)
+		e.Logger.Fatalf("Failed to load AWS config: %v", err)
 	}
+
+	// Create DynamoDB client
+	client := dynamodb.NewFromConfig(cfg)
+
+	// Get table name from environment variable or use default
+	tableName := os.Getenv("DYNAMODB_NOTIFICATION_TABLE")
+	if tableName == "" {
+		tableName = "Notifications"
+	}
+
+	// Create notification store with the DynamoDB client
+	store := dynamo.NewNotificationStore[model.BaseNotification](client, tableName)
 
 	// Register store with service
 	notification.RegisterStore(notificationService, store)

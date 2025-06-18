@@ -3,6 +3,7 @@ package dynamo
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -12,24 +13,35 @@ import (
 	"github.com/mi-24v/miwkey-extension/notification"
 )
 
+// DynamoDBClient defines the interface for DynamoDB operations
+type DynamoDBClient interface {
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+	Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+	UpdateItem(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
+	DeleteItem(ctx context.Context, params *dynamodb.DeleteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error)
+}
+
 // NotificationStoreImpl implements the notification.Store interface for DynamoDB
 type NotificationStoreImpl[T model.Notification] struct {
-	client    *dynamodb.Client
-	tableName string
+	client     DynamoDBClient
+	tableName  string
+	marshalMap func(interface{}) (map[string]types.AttributeValue, error)
 }
 
 // NewNotificationStore creates a new DynamoDB notification store
-func NewNotificationStore[T model.Notification](client *dynamodb.Client, tableName string) *NotificationStoreImpl[T] {
+func NewNotificationStore[T model.Notification](client DynamoDBClient, tableName string) *NotificationStoreImpl[T] {
 	return &NotificationStoreImpl[T]{
-		client:    client,
-		tableName: tableName,
+		client:     client,
+		tableName:  tableName,
+		marshalMap: attributevalue.MarshalMap,
 	}
 }
 
 // Create stores a new notification in DynamoDB
 func (s *NotificationStoreImpl[T]) Create(ctx context.Context, notification T) error {
 	// Convert notification to a map for DynamoDB
-	item, err := attributevalue.MarshalMap(notification)
+	item, err := s.marshalMap(notification)
 	if err != nil {
 		return fmt.Errorf("failed to marshal notification: %w", err)
 	}
@@ -67,6 +79,7 @@ func (s *NotificationStoreImpl[T]) List(ctx context.Context, userId string) ([]T
 	for _, item := range result.Items {
 		var notification T
 		if err := attributevalue.UnmarshalMap(item, &notification); err != nil {
+			log.Printf("failed to unmarshal notification: %v", err)
 			continue
 		}
 		notifications = append(notifications, notification)
