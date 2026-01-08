@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/mi-24v/miwkey-extension/internal/db/dynamo"
+	"github.com/mi-24v/miwkey-extension/internal/infra"
 	"github.com/mi-24v/miwkey-extension/model"
 	"github.com/mi-24v/miwkey-extension/notification"
 )
@@ -26,6 +27,13 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+
+	// Auth
+	secret, err := infra.LoadAuthSecret(context.Background())
+	if err != nil {
+		e.Logger.Fatalf("Failed to load auth secret: %v", err)
+	}
+	e.Use(infra.NewAuthMiddleware(secret))
 
 	// Initialize notification service with BaseNotification as the generic type
 	notificationService := notification.NewService[model.BaseNotification]()
