@@ -12,7 +12,7 @@ ultrathink
 - 各タスクの完了前に、期待通りの結果になっているか確認しなければならない
 - エラーを無視して次のタスクに進まない。必ずエラーを解決してから次のタスクへ進まなければならない
 - 指示にない機能を勝手に追加しない
-- 意味のある変更ごとにcommmitせよ
+- ファイル変更の意味ごとにgit commitしなければならない(see commit rule)
 
 ## commit rule
 When you suggest a commit:
