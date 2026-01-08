@@ -32,6 +32,7 @@ type BaseNotification struct {
 	ID         Aid              `json:"id"`
 	Type       NotificationType `json:"type"`
 	CreatedAt  time.Time        `json:"createdAt"`
+	NotifieeId Aid              `json:"notifieeId"`
 	NotifierId Aid              `json:"notifierId"`
 	IsRead     bool             `json:"isRead"`
 }
@@ -143,6 +144,7 @@ type Notification interface {
 	GetType() NotificationType
 	GetCreatedAt() time.Time
 	GetNotifierId() Aid
+	GetNotifieeId() Aid
 	IsReadStatus() bool
 }
 
@@ -164,6 +166,11 @@ func (n BaseNotification) GetCreatedAt() time.Time {
 // GetNotifierId returns the notifier ID
 func (n BaseNotification) GetNotifierId() Aid {
 	return n.NotifierId
+}
+
+// GetNotifieeId returns the notification receiver ID
+func (n BaseNotification) GetNotifieeId() Aid {
+	return n.NotifieeId
 }
 
 // IsReadStatus returns whether the notification has been read

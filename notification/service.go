@@ -9,10 +9,11 @@ import (
 
 type Service[T model.Notification] interface {
 	CreateNotification(ctx context.Context, notification T) (T, error)
-	GetNotifications(ctx context.Context, userId string) ([]T, error)
+	GetNotifications(ctx context.Context, userId string, opts ListOptions) ([]T, error)
 	GetNotification(ctx context.Context, id string) (T, error)
 	UpdateNotification(ctx context.Context, id string, isRead bool) (T, error)
 	DeleteNotification(ctx context.Context, id string) error
+	DeleteNotificationsByUser(ctx context.Context, userId string) error
 }
 
 // ServiceImpl handles notification business logic
@@ -50,12 +51,12 @@ func (s *ServiceImpl[T]) CreateNotification(ctx context.Context, notification T)
 }
 
 // GetNotifications retrieves all notifications for a user
-func (s *ServiceImpl[T]) GetNotifications(ctx context.Context, userId string) ([]T, error) {
+func (s *ServiceImpl[T]) GetNotifications(ctx context.Context, userId string, opts ListOptions) ([]T, error) {
 	if s.notificationStore == nil {
 		return nil, errors.New("notification store not initialized")
 	}
 
-	return s.notificationStore.List(ctx, userId)
+	return s.notificationStore.List(ctx, userId, opts)
 }
 
 // GetNotification retrieves a specific notification by ID
@@ -90,4 +91,13 @@ func (s *ServiceImpl[T]) DeleteNotification(ctx context.Context, id string) erro
 	}
 
 	return s.notificationStore.Delete(ctx, id)
+}
+
+// DeleteNotificationsByUser deletes all notifications for a user
+func (s *ServiceImpl[T]) DeleteNotificationsByUser(ctx context.Context, userId string) error {
+	if s.notificationStore == nil {
+		return errors.New("notification store not initialized")
+	}
+
+	return s.notificationStore.DeleteByUser(ctx, userId)
 }

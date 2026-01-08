@@ -3,6 +3,7 @@ package notification
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/mi-24v/miwkey-extension/model"
@@ -14,6 +15,7 @@ type NotificationHandler[T model.Notification] interface {
 	GetNotification(c echo.Context) error
 	UpdateNotification(c echo.Context) error
 	DeleteNotification(c echo.Context) error
+	DeleteNotificationsByUser(c echo.Context) error
 }
 
 // NotificationHandlerImpl handles HTTP requests for notifications
@@ -41,20 +43,41 @@ func RegisterHandlers[T model.Notification](e *echo.Echo, service Service[T]) {
 	g.GET("/notifications/:notificationId", handler.GetNotification)
 	g.PUT("/notifications/:notificationId", handler.UpdateNotification)
 	g.DELETE("/notifications/:notificationId", handler.DeleteNotification)
+	g.DELETE("/notifications", handler.DeleteNotificationsByUser)
 }
 
 // GetNotifications handles GET /notifications
 func (h *NotificationHandlerImpl[T]) GetNotifications(c echo.Context) error {
-	// Get user ID from query parameter
 	userId := c.QueryParam("userId")
 	if userId == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "userId is required",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "userId is required"})
 	}
 
-	// Get notifications from service
-	notifications, err := h.service.GetNotifications(c.Request().Context(), userId)
+	limit := 20
+	if raw := c.QueryParam("limit"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
+			limit = v
+		}
+	}
+
+	parseTypes := func(key string) []model.NotificationType {
+		values := c.QueryParams()[key]
+		res := make([]model.NotificationType, 0, len(values))
+		for _, v := range values {
+			res = append(res, model.NotificationType(v))
+		}
+		return res
+	}
+
+	opts := ListOptions{
+		SinceID:      c.QueryParam("sinceId"),
+		UntilID:      c.QueryParam("untilId"),
+		Limit:        limit,
+		IncludeTypes: parseTypes("includeTypes"),
+		ExcludeTypes: parseTypes("excludeTypes"),
+	}
+
+	notifications, err := h.service.GetNotifications(c.Request().Context(), userId, opts)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
@@ -163,6 +186,20 @@ func (h *NotificationHandlerImpl[T]) DeleteNotification(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
 		})
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+// DeleteNotificationsByUser handles DELETE /notifications?userId=...
+func (h *NotificationHandlerImpl[T]) DeleteNotificationsByUser(c echo.Context) error {
+	userId := c.QueryParam("userId")
+	if userId == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "userId is required"})
+	}
+
+	if err := h.service.DeleteNotificationsByUser(c.Request().Context(), userId); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	return c.NoContent(http.StatusNoContent)

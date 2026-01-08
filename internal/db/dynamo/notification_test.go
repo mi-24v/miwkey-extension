@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/mi-24v/miwkey-extension/model"
+	"github.com/mi-24v/miwkey-extension/notification"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -70,7 +72,9 @@ func TestCreate(t *testing.T) {
 			notification: model.BaseNotification{
 				ID:         "test-id",
 				Type:       model.NotificationTypeTest,
+				NotifieeId: "user-id",
 				NotifierId: "user-id",
+				CreatedAt:  time.Now(),
 				IsRead:     false,
 			},
 			clientSetup: func(m *MockDynamoDBClient) {
@@ -84,7 +88,9 @@ func TestCreate(t *testing.T) {
 				// This would cause a marshal error in a real scenario, but for testing we'll mock the error
 				ID:         "test-id",
 				Type:       model.NotificationTypeTest,
+				NotifieeId: "user-id",
 				NotifierId: "user-id",
+				CreatedAt:  time.Now(),
 				IsRead:     false,
 			},
 			clientSetup: func(m *MockDynamoDBClient) {
@@ -97,7 +103,9 @@ func TestCreate(t *testing.T) {
 			notification: model.BaseNotification{
 				ID:         "test-id",
 				Type:       model.NotificationTypeTest,
+				NotifieeId: "user-id",
 				NotifierId: "user-id",
+				CreatedAt:  time.Now(),
 				IsRead:     false,
 			},
 			clientSetup: func(m *MockDynamoDBClient) {
@@ -153,36 +161,27 @@ func TestList(t *testing.T) {
 			name:   "Success",
 			userId: "user-id",
 			clientSetup: func(m *MockDynamoDBClient) {
-				// Create a mock response with items
-				items := []map[string]types.AttributeValue{
-					{
-						"id":         &types.AttributeValueMemberS{Value: "test-id-1"},
-						"type":       &types.AttributeValueMemberS{Value: "test"},
-						"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
-						"isRead":     &types.AttributeValueMemberBOOL{Value: false},
-					},
-					{
-						"id":         &types.AttributeValueMemberS{Value: "test-id-2"},
-						"type":       &types.AttributeValueMemberS{Value: "test"},
-						"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
-						"isRead":     &types.AttributeValueMemberBOOL{Value: true},
-					},
-				}
-				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{
-					Items: items,
-				}, nil)
+				n1 := model.BaseNotification{ID: "test-id-1", Type: model.NotificationTypeTest, NotifieeId: "user-id", NotifierId: "user-id", IsRead: false, CreatedAt: time.Now()}
+				n2 := model.BaseNotification{ID: "test-id-2", Type: model.NotificationTypeTest, NotifieeId: "user-id", NotifierId: "user-id", IsRead: true, CreatedAt: time.Now()}
+				item1, _ := attributevalue.MarshalMap(n1)
+				item1["sortKey"] = &types.AttributeValueMemberS{Value: "000#test-id-1"}
+				item2, _ := attributevalue.MarshalMap(n2)
+				item2["sortKey"] = &types.AttributeValueMemberS{Value: "000#test-id-2"}
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item1, item2}}, nil)
 			},
 			expectedResult: []model.BaseNotification{
 				{
 					ID:         "test-id-1",
 					Type:       model.NotificationTypeTest,
 					NotifierId: "user-id",
+					NotifieeId: "user-id",
 					IsRead:     false,
 				},
 				{
 					ID:         "test-id-2",
 					Type:       model.NotificationTypeTest,
 					NotifierId: "user-id",
+					NotifieeId: "user-id",
 					IsRead:     true,
 				},
 			},
@@ -207,6 +206,8 @@ func TestList(t *testing.T) {
 						"id":         &types.AttributeValueMemberS{Value: "test-id-1"},
 						"type":       &types.AttributeValueMemberS{Value: "test"},
 						"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
+						"notifieeId": &types.AttributeValueMemberS{Value: "user-id"},
+						"sortKey":    &types.AttributeValueMemberS{Value: "000#test-id-1"},
 						"isRead":     &types.AttributeValueMemberS{Value: "not-a-bool"}, // This will cause an unmarshal error
 					},
 				}
@@ -227,7 +228,7 @@ func TestList(t *testing.T) {
 			store := NewNotificationStore[model.BaseNotification](mockClient, "test-table")
 
 			// Execute
-			result, err := store.List(context.Background(), tc.userId)
+			result, err := store.List(context.Background(), tc.userId, notification.ListOptions{})
 
 			// Verify
 			if tc.expectedError {
@@ -265,21 +266,16 @@ func TestGet(t *testing.T) {
 			name: "Success",
 			id:   "test-id",
 			clientSetup: func(m *MockDynamoDBClient) {
-				// Create a mock response with an item
-				item := map[string]types.AttributeValue{
-					"id":         &types.AttributeValueMemberS{Value: "test-id"},
-					"type":       &types.AttributeValueMemberS{Value: "test"},
-					"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
-					"isRead":     &types.AttributeValueMemberBOOL{Value: false},
-				}
-				m.On("GetItem", mock.Anything, mock.AnythingOfType("*dynamodb.GetItemInput")).Return(&dynamodb.GetItemOutput{
-					Item: item,
-				}, nil)
+				n := model.BaseNotification{ID: "test-id", Type: model.NotificationTypeTest, NotifieeId: "user-id", NotifierId: "user-id", IsRead: false, CreatedAt: time.Now()}
+				item, _ := attributevalue.MarshalMap(n)
+				item["sortKey"] = &types.AttributeValueMemberS{Value: "000#test-id"}
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item}}, nil)
 			},
 			expectedResult: model.BaseNotification{
 				ID:         "test-id",
 				Type:       model.NotificationTypeTest,
 				NotifierId: "user-id",
+				NotifieeId: "user-id",
 				IsRead:     false,
 			},
 			expectedError: false,
@@ -288,10 +284,7 @@ func TestGet(t *testing.T) {
 			name: "Not Found",
 			id:   "test-id",
 			clientSetup: func(m *MockDynamoDBClient) {
-				// Create a mock response with no item
-				m.On("GetItem", mock.Anything, mock.AnythingOfType("*dynamodb.GetItemInput")).Return(&dynamodb.GetItemOutput{
-					Item: nil,
-				}, nil)
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{}}, nil)
 			},
 			expectedResult: model.BaseNotification{},
 			expectedError:  true,
@@ -300,7 +293,7 @@ func TestGet(t *testing.T) {
 			name: "DynamoDB Error",
 			id:   "test-id",
 			clientSetup: func(m *MockDynamoDBClient) {
-				m.On("GetItem", mock.Anything, mock.AnythingOfType("*dynamodb.GetItemInput")).Return(&dynamodb.GetItemOutput{}, errors.New("dynamodb error"))
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{}, errors.New("dynamodb error"))
 			},
 			expectedResult: model.BaseNotification{},
 			expectedError:  true,
@@ -309,16 +302,15 @@ func TestGet(t *testing.T) {
 			name: "Unmarshal Error",
 			id:   "test-id",
 			clientSetup: func(m *MockDynamoDBClient) {
-				// Create a mock response with an invalid item that will cause an unmarshal error
 				item := map[string]types.AttributeValue{
 					"id":         &types.AttributeValueMemberS{Value: "test-id"},
 					"type":       &types.AttributeValueMemberS{Value: "test"},
 					"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
+					"notifieeId": &types.AttributeValueMemberS{Value: "user-id"},
+					"sortKey":    &types.AttributeValueMemberS{Value: "000#test-id"},
 					"isRead":     &types.AttributeValueMemberS{Value: "not-a-bool"}, // This will cause an unmarshal error
 				}
-				m.On("GetItem", mock.Anything, mock.AnythingOfType("*dynamodb.GetItemInput")).Return(&dynamodb.GetItemOutput{
-					Item: item,
-				}, nil)
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item}}, nil)
 			},
 			expectedResult: model.BaseNotification{},
 			expectedError:  true,
@@ -363,6 +355,15 @@ func TestUpdate(t *testing.T) {
 			id:     "test-id",
 			isRead: true,
 			clientSetup: func(m *MockDynamoDBClient) {
+				item := map[string]types.AttributeValue{
+					"id":         &types.AttributeValueMemberS{Value: "test-id"},
+					"type":       &types.AttributeValueMemberS{Value: "test"},
+					"notifieeId": &types.AttributeValueMemberS{Value: "user-id"},
+					"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
+					"sortKey":    &types.AttributeValueMemberS{Value: "000#test-id"},
+					"isRead":     &types.AttributeValueMemberBOOL{Value: false},
+				}
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item}}, nil)
 				m.On("UpdateItem", mock.Anything, mock.AnythingOfType("*dynamodb.UpdateItemInput")).Return(&dynamodb.UpdateItemOutput{}, nil)
 			},
 			expectedError: false,
@@ -372,6 +373,15 @@ func TestUpdate(t *testing.T) {
 			id:     "test-id",
 			isRead: true,
 			clientSetup: func(m *MockDynamoDBClient) {
+				item := map[string]types.AttributeValue{
+					"id":         &types.AttributeValueMemberS{Value: "test-id"},
+					"type":       &types.AttributeValueMemberS{Value: "test"},
+					"notifieeId": &types.AttributeValueMemberS{Value: "user-id"},
+					"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
+					"sortKey":    &types.AttributeValueMemberS{Value: "000#test-id"},
+					"isRead":     &types.AttributeValueMemberBOOL{Value: false},
+				}
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item}}, nil)
 				m.On("UpdateItem", mock.Anything, mock.AnythingOfType("*dynamodb.UpdateItemInput")).Return(&dynamodb.UpdateItemOutput{}, errors.New("dynamodb error"))
 			},
 			expectedError: true,
@@ -410,6 +420,15 @@ func TestDelete(t *testing.T) {
 			name: "Success",
 			id:   "test-id",
 			clientSetup: func(m *MockDynamoDBClient) {
+				item := map[string]types.AttributeValue{
+					"id":         &types.AttributeValueMemberS{Value: "test-id"},
+					"type":       &types.AttributeValueMemberS{Value: "test"},
+					"notifieeId": &types.AttributeValueMemberS{Value: "user-id"},
+					"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
+					"sortKey":    &types.AttributeValueMemberS{Value: "000#test-id"},
+					"isRead":     &types.AttributeValueMemberBOOL{Value: false},
+				}
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item}}, nil)
 				m.On("DeleteItem", mock.Anything, mock.AnythingOfType("*dynamodb.DeleteItemInput")).Return(&dynamodb.DeleteItemOutput{}, nil)
 			},
 			expectedError: false,
@@ -418,6 +437,15 @@ func TestDelete(t *testing.T) {
 			name: "DynamoDB Error",
 			id:   "test-id",
 			clientSetup: func(m *MockDynamoDBClient) {
+				item := map[string]types.AttributeValue{
+					"id":         &types.AttributeValueMemberS{Value: "test-id"},
+					"type":       &types.AttributeValueMemberS{Value: "test"},
+					"notifieeId": &types.AttributeValueMemberS{Value: "user-id"},
+					"notifierId": &types.AttributeValueMemberS{Value: "user-id"},
+					"sortKey":    &types.AttributeValueMemberS{Value: "000#test-id"},
+					"isRead":     &types.AttributeValueMemberBOOL{Value: false},
+				}
+				m.On("Query", mock.Anything, mock.AnythingOfType("*dynamodb.QueryInput")).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item}}, nil)
 				m.On("DeleteItem", mock.Anything, mock.AnythingOfType("*dynamodb.DeleteItemInput")).Return(&dynamodb.DeleteItemOutput{}, errors.New("dynamodb error"))
 			},
 			expectedError: true,

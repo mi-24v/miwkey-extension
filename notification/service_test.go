@@ -21,8 +21,8 @@ func (m *MockStore) Create(ctx context.Context, notification model.BaseNotificat
 	return args.Error(0)
 }
 
-func (m *MockStore) List(ctx context.Context, userId string) ([]model.BaseNotification, error) {
-	args := m.Called(ctx, userId)
+func (m *MockStore) List(ctx context.Context, userId string, opts ListOptions) ([]model.BaseNotification, error) {
+	args := m.Called(ctx, userId, opts)
 	return args.Get(0).([]model.BaseNotification), args.Error(1)
 }
 
@@ -38,6 +38,11 @@ func (m *MockStore) Update(ctx context.Context, id string, isRead bool) error {
 
 func (m *MockStore) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockStore) DeleteByUser(ctx context.Context, userId string) error {
+	args := m.Called(ctx, userId)
 	return args.Error(0)
 }
 
@@ -72,6 +77,7 @@ func TestCreateNotification(t *testing.T) {
 				ID:         "test-id",
 				Type:       model.NotificationTypeTest,
 				CreatedAt:  time.Now(),
+				NotifieeId: "target-id",
 				NotifierId: "user-id",
 				IsRead:     false,
 			},
@@ -86,6 +92,7 @@ func TestCreateNotification(t *testing.T) {
 				ID:         "test-id",
 				Type:       model.NotificationTypeTest,
 				CreatedAt:  time.Now(),
+				NotifieeId: "target-id",
 				NotifierId: "user-id",
 				IsRead:     false,
 			},
@@ -140,6 +147,7 @@ func TestGetNotifications(t *testing.T) {
 						ID:         "test-id-1",
 						Type:       model.NotificationTypeTest,
 						CreatedAt:  time.Now(),
+						NotifieeId: "user-id",
 						NotifierId: "user-id",
 						IsRead:     false,
 					},
@@ -147,11 +155,12 @@ func TestGetNotifications(t *testing.T) {
 						ID:         "test-id-2",
 						Type:       model.NotificationTypeTest,
 						CreatedAt:  time.Now(),
+						NotifieeId: "user-id",
 						NotifierId: "user-id",
 						IsRead:     true,
 					},
 				}
-				m.On("List", mock.Anything, "user-id").Return(notifications, nil)
+				m.On("List", mock.Anything, "user-id", mock.AnythingOfType("notification.ListOptions")).Return(notifications, nil)
 			},
 			userId: "user-id",
 			expectedResult: []model.BaseNotification{
@@ -175,7 +184,7 @@ func TestGetNotifications(t *testing.T) {
 		{
 			name: "Store Error",
 			storeSetup: func(m *MockStore) {
-				m.On("List", mock.Anything, "user-id").Return([]model.BaseNotification{}, errors.New("store error"))
+				m.On("List", mock.Anything, "user-id", mock.AnythingOfType("notification.ListOptions")).Return([]model.BaseNotification{}, errors.New("store error"))
 			},
 			userId:         "user-id",
 			expectedResult: nil,
@@ -201,7 +210,7 @@ func TestGetNotifications(t *testing.T) {
 			}
 
 			// Execute
-			result, err := service.GetNotifications(context.Background(), tc.userId)
+			result, err := service.GetNotifications(context.Background(), tc.userId, ListOptions{})
 
 			// Verify
 			if tc.expectedError {
@@ -232,6 +241,7 @@ func TestGetNotification(t *testing.T) {
 					ID:         "test-id",
 					Type:       model.NotificationTypeTest,
 					CreatedAt:  time.Now(),
+					NotifieeId: "user-id",
 					NotifierId: "user-id",
 					IsRead:     false,
 				}
@@ -242,6 +252,7 @@ func TestGetNotification(t *testing.T) {
 				ID:         "test-id",
 				Type:       model.NotificationTypeTest,
 				CreatedAt:  time.Now(),
+				NotifieeId: "user-id",
 				NotifierId: "user-id",
 				IsRead:     false,
 			},
@@ -312,6 +323,7 @@ func TestUpdateNotification(t *testing.T) {
 					ID:         "test-id",
 					Type:       model.NotificationTypeTest,
 					CreatedAt:  time.Now(),
+					NotifieeId: "user-id",
 					NotifierId: "user-id",
 					IsRead:     true,
 				}

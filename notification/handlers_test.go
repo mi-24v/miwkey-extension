@@ -24,8 +24,8 @@ func (m *MockService) CreateNotification(ctx context.Context, notification model
 	return args.Get(0).(model.BaseNotification), args.Error(1)
 }
 
-func (m *MockService) GetNotifications(ctx context.Context, userId string) ([]model.BaseNotification, error) {
-	args := m.Called(ctx, userId)
+func (m *MockService) GetNotifications(ctx context.Context, userId string, opts ListOptions) ([]model.BaseNotification, error) {
+	args := m.Called(ctx, userId, opts)
 	return args.Get(0).([]model.BaseNotification), args.Error(1)
 }
 
@@ -41,6 +41,11 @@ func (m *MockService) UpdateNotification(ctx context.Context, id string, isRead 
 
 func (m *MockService) DeleteNotification(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockService) DeleteNotificationsByUser(ctx context.Context, userId string) error {
+	args := m.Called(ctx, userId)
 	return args.Error(0)
 }
 
@@ -61,14 +66,15 @@ func TestGetNotificationsHandler(t *testing.T) {
 					{
 						ID:         "test-id-1",
 						Type:       model.NotificationTypeTest,
+						NotifieeId: "user-id",
 						NotifierId: "user-id",
 						IsRead:     false,
 					},
 				}
-				m.On("GetNotifications", mock.Anything, "user-id").Return(notifications, nil)
+				m.On("GetNotifications", mock.Anything, "user-id", mock.AnythingOfType("notification.ListOptions")).Return(notifications, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `[{"id":"test-id-1","type":"test","createdAt":"0001-01-01T00:00:00Z","notifierId":"user-id","isRead":false}]`,
+			expectedBody:   `[{"id":"test-id-1","type":"test","createdAt":"0001-01-01T00:00:00Z","notifieeId":"user-id","notifierId":"user-id","isRead":false}]`,
 		},
 		{
 			name:   "Missing UserId",
@@ -83,7 +89,7 @@ func TestGetNotificationsHandler(t *testing.T) {
 			name:   "Service Error",
 			userId: "user-id",
 			serviceSetup: func(m *MockService) {
-				m.On("GetNotifications", mock.Anything, "user-id").Return([]model.BaseNotification{}, errors.New("service error"))
+				m.On("GetNotifications", mock.Anything, "user-id", mock.AnythingOfType("notification.ListOptions")).Return([]model.BaseNotification{}, errors.New("service error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"error":"service error"}`,
@@ -150,7 +156,7 @@ func TestCreateNotificationHandler(t *testing.T) {
 				m.On("CreateNotification", mock.Anything, mock.AnythingOfType("model.BaseNotification")).Return(notification, nil)
 			},
 			expectedStatus: http.StatusCreated,
-			expectedBody:   `{"id":"test-id","type":"test","createdAt":"0001-01-01T00:00:00Z","notifierId":"user-id","isRead":false}`,
+			expectedBody:   `{"id":"test-id","type":"test","createdAt":"0001-01-01T00:00:00Z","notifierId":"user-id","notifieeId":"","isRead":false}`,
 		},
 		{
 			name:        "Invalid Request Body",
@@ -232,7 +238,7 @@ func TestGetNotificationHandler(t *testing.T) {
 				m.On("GetNotification", mock.Anything, "test-id").Return(notification, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"id":"test-id","type":"test","createdAt":"0001-01-01T00:00:00Z","notifierId":"user-id","isRead":false}`,
+			expectedBody:   `{"id":"test-id","type":"test","createdAt":"0001-01-01T00:00:00Z","notifierId":"user-id","notifieeId":"","isRead":false}`,
 		},
 		{
 			name:           "Missing NotificationId",
@@ -322,7 +328,7 @@ func TestUpdateNotificationHandler(t *testing.T) {
 				m.On("UpdateNotification", mock.Anything, "test-id", true).Return(notification, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"id":"test-id","type":"test","createdAt":"0001-01-01T00:00:00Z","notifierId":"user-id","isRead":true}`,
+			expectedBody:   `{"id":"test-id","type":"test","createdAt":"0001-01-01T00:00:00Z","notifierId":"user-id","notifieeId":"","isRead":true}`,
 		},
 		{
 			name:           "Missing NotificationId",
