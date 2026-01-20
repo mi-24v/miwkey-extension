@@ -77,6 +77,29 @@ func TestGetNotificationsHandler(t *testing.T) {
 			expectedBody:   `[{"id":"test-id-1","type":"test","createdAt":"0001-01-01T00:00:00Z","notifieeId":"user-id","notifierId":"user-id","isRead":false}]`,
 		},
 		{
+			name:   "With Options",
+			userId: "user-id",
+			serviceSetup: func(m *MockService) {
+				notifications := []model.BaseNotification{
+					{
+						ID:         "test-id-1",
+						Type:       model.NotificationTypeFollow,
+						NotifieeId: "user-id",
+						NotifierId: "user-id",
+						IsRead:     false,
+					},
+				}
+				matcher := mock.MatchedBy(func(opts ListOptions) bool {
+					return opts.SinceID == "since" && opts.UntilID == "until" && opts.Limit == 5 &&
+						len(opts.IncludeTypes) == 2 && opts.IncludeTypes[0] == model.NotificationTypeFollow && opts.IncludeTypes[1] == model.NotificationTypeMention &&
+						len(opts.ExcludeTypes) == 1 && opts.ExcludeTypes[0] == model.NotificationTypeTest
+				})
+				m.On("GetNotifications", mock.Anything, "user-id", matcher).Return(notifications, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   `[{"id":"test-id-1","type":"follow","createdAt":"0001-01-01T00:00:00Z","notifieeId":"user-id","notifierId":"user-id","isRead":false}]`,
+		},
+		{
 			name:   "Missing UserId",
 			userId: "",
 			serviceSetup: func(m *MockService) {
@@ -108,6 +131,14 @@ func TestGetNotificationsHandler(t *testing.T) {
 			if tc.userId != "" {
 				q := req.URL.Query()
 				q.Add("userId", tc.userId)
+				if tc.name == "With Options" {
+					q.Add("limit", "5")
+					q.Add("sinceId", "since")
+					q.Add("untilId", "until")
+					q.Add("includeTypes", string(model.NotificationTypeFollow))
+					q.Add("includeTypes", string(model.NotificationTypeMention))
+					q.Add("excludeTypes", string(model.NotificationTypeTest))
+				}
 				req.URL.RawQuery = q.Encode()
 			}
 

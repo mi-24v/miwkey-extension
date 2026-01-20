@@ -55,16 +55,19 @@ func NewAuthMiddleware(secret string) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			auth := c.Request().Header.Get("Authorization")
 			if !strings.HasPrefix(auth, "Bearer ") {
+				c.Logger().Warn("auth: missing bearer token")
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing bearer token")
 			}
 			tokenStr := strings.TrimPrefix(auth, "Bearer ")
 			token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+					c.Logger().Warn("auth: invalid signing method")
 					return nil, echo.NewHTTPError(http.StatusUnauthorized, "invalid signing method")
 				}
 				return []byte(secret), nil
 			})
 			if err != nil || token == nil || !token.Valid {
+				c.Logger().Warnf("auth: invalid token: %v", err)
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
 			}
 			return next(c)

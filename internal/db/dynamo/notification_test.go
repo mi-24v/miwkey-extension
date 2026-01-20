@@ -218,6 +218,25 @@ func TestList(t *testing.T) {
 			expectedResult: []model.BaseNotification{}, // Empty slice because the item will be skipped due to unmarshal error
 			expectedError:  false,
 		},
+		{
+			name:   "With Options",
+			userId: "user-id",
+			clientSetup: func(m *MockDynamoDBClient) {
+				n1 := model.BaseNotification{ID: "aidfollow", Type: model.NotificationTypeFollow, NotifieeId: "user-id", NotifierId: "user-id", IsRead: false, CreatedAt: model.MustParseAid("00000001xx")}
+				n2 := model.BaseNotification{ID: "aidtest", Type: model.NotificationTypeTest, NotifieeId: "user-id", NotifierId: "user-id", IsRead: false, CreatedAt: model.MustParseAid("00000002xx")}
+				item1, _ := attributevalue.MarshalMap(n1)
+				item1["sortKey"] = &types.AttributeValueMemberS{Value: "000000001#aidfollow"}
+				item2, _ := attributevalue.MarshalMap(n2)
+				item2["sortKey"] = &types.AttributeValueMemberS{Value: "000000002#aidtest"}
+				m.On("Query", mock.Anything, mock.MatchedBy(func(input *dynamodb.QueryInput) bool {
+					return input.Limit != nil && *input.Limit == 1
+				})).Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item1, item2}}, nil)
+			},
+			expectedResult: []model.BaseNotification{
+				{ID: "aidfollow", Type: model.NotificationTypeFollow, NotifierId: "user-id", NotifieeId: "user-id", IsRead: false},
+			},
+			expectedError: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -228,7 +247,13 @@ func TestList(t *testing.T) {
 			store := NewNotificationStore[model.BaseNotification](mockClient, "test-table")
 
 			// Execute
-			result, err := store.List(context.Background(), tc.userId, notification.ListOptions{})
+			opts := notification.ListOptions{}
+			if tc.name == "With Options" {
+				opts.Limit = 1
+				opts.IncludeTypes = []model.NotificationType{model.NotificationTypeFollow, model.NotificationTypeMention}
+				opts.ExcludeTypes = []model.NotificationType{model.NotificationTypeTest}
+			}
+			result, err := store.List(context.Background(), tc.userId, opts)
 
 			// Verify
 			if tc.expectedError {
