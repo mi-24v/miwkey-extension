@@ -20,6 +20,20 @@ type MockDynamoDBClient struct {
 	mock.Mock
 }
 
+func stringValue(value types.AttributeValue) string {
+	if v, ok := value.(*types.AttributeValueMemberS); ok {
+		return v.Value
+	}
+	return ""
+}
+
+func boolValue(value types.AttributeValue) bool {
+	if v, ok := value.(*types.AttributeValueMemberBOOL); ok {
+		return v.Value
+	}
+	return false
+}
+
 func (m *MockDynamoDBClient) PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
 	args := m.Called(ctx, params)
 	return args.Get(0).(*dynamodb.PutItemOutput), args.Error(1)
@@ -146,6 +160,40 @@ func TestCreate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateUsesLowerCamelDynamoDBAttributes(t *testing.T) {
+	mockClient := new(MockDynamoDBClient)
+	createdAt := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	notification := model.BaseNotification{
+		ID:         "test-id",
+		Type:       model.NotificationTypeTest,
+		NotifieeId: "target-id",
+		NotifierId: "actor-id",
+		CreatedAt:  createdAt,
+		IsRead:     true,
+	}
+
+	mockClient.On("PutItem", mock.Anything, mock.MatchedBy(func(input *dynamodb.PutItemInput) bool {
+		item := input.Item
+		_, hasUpperID := item["ID"]
+		_, hasUpperType := item["Type"]
+		return !hasUpperID &&
+			!hasUpperType &&
+			stringValue(item["id"]) == "test-id" &&
+			stringValue(item["type"]) == string(model.NotificationTypeTest) &&
+			stringValue(item["notifieeId"]) == "target-id" &&
+			stringValue(item["notifierId"]) == "actor-id" &&
+			boolValue(item["isRead"]) &&
+			stringValue(item["sortKey"]) == "1782864000000#test-id"
+	})).Return(&dynamodb.PutItemOutput{}, nil)
+
+	store := NewNotificationStore[model.BaseNotification](mockClient, "test-table")
+
+	err := store.Create(context.Background(), notification)
+
+	assert.NoError(t, err)
+	mockClient.AssertExpectations(t)
 }
 
 func TestList(t *testing.T) {

@@ -10,6 +10,7 @@ type NotificationType string
 
 // Notification types
 const (
+	NotificationTypeNote                  NotificationType = "note"
 	NotificationTypeFollow                NotificationType = "follow"
 	NotificationTypeMention               NotificationType = "mention"
 	NotificationTypeReply                 NotificationType = "reply"
@@ -17,10 +18,16 @@ const (
 	NotificationTypeQuote                 NotificationType = "quote"
 	NotificationTypeReaction              NotificationType = "reaction"
 	NotificationTypePollEnded             NotificationType = "pollEnded"
+	NotificationTypeScheduledNotePosted   NotificationType = "scheduledNotePosted"
+	NotificationTypeScheduledNotePostFail NotificationType = "scheduledNotePostFailed"
 	NotificationTypeReceiveFollowRequest  NotificationType = "receiveFollowRequest"
 	NotificationTypeFollowRequestAccepted NotificationType = "followRequestAccepted"
 	NotificationTypeRoleAssigned          NotificationType = "roleAssigned"
+	NotificationTypeChatRoomInvitation    NotificationType = "chatRoomInvitationReceived"
 	NotificationTypeAchievementEarned     NotificationType = "achievementEarned"
+	NotificationTypeExportCompleted       NotificationType = "exportCompleted"
+	NotificationTypeLogin                 NotificationType = "login"
+	NotificationTypeCreateToken           NotificationType = "createToken"
 	NotificationTypeApp                   NotificationType = "app"
 	NotificationTypeTest                  NotificationType = "test"
 	NotificationTypeGroupReaction         NotificationType = "reaction:grouped"
@@ -29,12 +36,29 @@ const (
 
 // BaseNotification contains common fields for all notification types
 type BaseNotification struct {
-	ID         Aid              `json:"id"`
-	Type       NotificationType `json:"type"`
-	CreatedAt  time.Time        `json:"createdAt"`
-	NotifieeId Aid              `json:"notifieeId"`
-	NotifierId Aid              `json:"notifierId"`
-	IsRead     bool             `json:"isRead"`
+	ID         Aid              `json:"id" dynamodbav:"id"`
+	Type       NotificationType `json:"type" dynamodbav:"type"`
+	CreatedAt  time.Time        `json:"createdAt" dynamodbav:"createdAt"`
+	NotifieeId Aid              `json:"notifieeId" dynamodbav:"notifieeId"`
+	NotifierId Aid              `json:"notifierId" dynamodbav:"notifierId"`
+	IsRead     bool             `json:"isRead" dynamodbav:"isRead"`
+
+	NoteId           Aid            `json:"noteId,omitempty" dynamodbav:"noteId,omitempty"`
+	TargetNoteId     Aid            `json:"targetNoteId,omitempty" dynamodbav:"targetNoteId,omitempty"`
+	NoteDraftId      Aid            `json:"noteDraftId,omitempty" dynamodbav:"noteDraftId,omitempty"`
+	RoleId           Aid            `json:"roleId,omitempty" dynamodbav:"roleId,omitempty"`
+	InvitationId     string         `json:"invitationId,omitempty" dynamodbav:"invitationId,omitempty"`
+	Message          *string        `json:"message,omitempty" dynamodbav:"message,omitempty"`
+	Reaction         string         `json:"reaction,omitempty" dynamodbav:"reaction,omitempty"`
+	Achievement      Achievement    `json:"achievement,omitempty" dynamodbav:"achievement,omitempty"`
+	ExportedEntity   string         `json:"exportedEntity,omitempty" dynamodbav:"exportedEntity,omitempty"`
+	FileId           Aid            `json:"fileId,omitempty" dynamodbav:"fileId,omitempty"`
+	CustomBody       string         `json:"customBody,omitempty" dynamodbav:"customBody,omitempty"`
+	CustomHeader     *string        `json:"customHeader,omitempty" dynamodbav:"customHeader,omitempty"`
+	CustomIcon       *string        `json:"customIcon,omitempty" dynamodbav:"customIcon,omitempty"`
+	AppAccessTokenId *string        `json:"appAccessTokenId,omitempty" dynamodbav:"appAccessTokenId,omitempty"`
+	Reactions        []ReactionUser `json:"reactions,omitempty" dynamodbav:"reactions,omitempty"`
+	UserIds          []Aid          `json:"userIds,omitempty" dynamodbav:"userIds,omitempty"`
 }
 
 // FollowNotification represents a follow notification
