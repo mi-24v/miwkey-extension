@@ -31,3 +31,19 @@ func TestBaseNotificationPreservesReactionPayloadFields(t *testing.T) {
 	assert.Equal(t, "note-id", got["noteId"])
 	assert.Equal(t, ":test:", got["reaction"])
 }
+
+func TestBaseNotificationOmitsEmptyNotifierId(t *testing.T) {
+	notification := BaseNotification{
+		ID:         "notification-id",
+		Type:       NotificationTypeTest,
+		NotifieeId: "target-user-id",
+		IsRead:     false,
+	}
+
+	encoded, err := json.Marshal(notification)
+	require.NoError(t, err)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(encoded, &got))
+	assert.NotContains(t, got, "notifierId")
+}

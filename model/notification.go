@@ -40,7 +40,7 @@ type BaseNotification struct {
 	Type       NotificationType `json:"type" dynamodbav:"type"`
 	CreatedAt  time.Time        `json:"createdAt" dynamodbav:"createdAt"`
 	NotifieeId Aid              `json:"notifieeId" dynamodbav:"notifieeId"`
-	NotifierId Aid              `json:"notifierId" dynamodbav:"notifierId"`
+	NotifierId Aid              `json:"notifierId,omitempty" dynamodbav:"notifierId,omitempty"`
 	IsRead     bool             `json:"isRead" dynamodbav:"isRead"`
 
 	NoteId           Aid            `json:"noteId,omitempty" dynamodbav:"noteId,omitempty"`
