@@ -22,4 +22,5 @@ COPY --from=build /out/miwkey-extension /miwkey-extension
 EXPOSE 8080
 
 USER nonroot:nonroot
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["/miwkey-extension", "healthcheck"]
 ENTRYPOINT ["/miwkey-extension"]

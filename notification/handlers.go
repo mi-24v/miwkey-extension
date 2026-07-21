@@ -32,10 +32,12 @@ func NewNotificationHandler[T model.Notification](service Service[T]) *Notificat
 
 // RegisterHandlers registers all notification API handlers with the Echo instance
 func RegisterHandlers[T model.Notification](e *echo.Echo, service Service[T]) {
-	handler := NewNotificationHandler(service)
+	RegisterHandlersWithGroup(e.Group("/api/v1"), service)
+}
 
-	// Group all notification routes under /api/v1
-	g := e.Group("/api/v1")
+// RegisterHandlersWithGroup registers all notification API handlers with an Echo group.
+func RegisterHandlersWithGroup[T model.Notification](g *echo.Group, service Service[T]) {
+	handler := NewNotificationHandler(service)
 
 	// Register routes
 	g.GET("/notifications", handler.GetNotifications)

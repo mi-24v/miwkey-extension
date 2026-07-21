@@ -34,6 +34,7 @@ func TestDockerfileCrossCompilesForTargetPlatform(t *testing.T) {
 		"ARG TARGETOS",
 		"ARG TARGETARCH",
 		"GOOS=${TARGETOS} GOARCH=${TARGETARCH}",
+		`HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["/miwkey-extension", "healthcheck"]`,
 	}
 
 	for _, snippet := range requiredSnippets {
