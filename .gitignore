@@ -115,3 +115,6 @@ modules.xml
 
 # Local integration-test data
 .dynamodb/
+
+# agent temporary output
+.ai/
