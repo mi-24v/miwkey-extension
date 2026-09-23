@@ -71,10 +71,3 @@ CI の実行内容は [.github/workflows/test.yml](.github/workflows/test.yml) �
 - 起動設定、連携、ヘルスチェック、ログ、イメージ公開の設計は
   [Runtime Handoff Design](docs/superpowers/specs/2026-07-22-notification-extension-runtime-handoff-design.md) を参照する。
   実装状況や実行コマンドは、現在のコードと workflow でも確認する。
-
-## コミット
-
-このリポジトリでコミットを提案・実行する際は、`git-commit` スキルに加えて
-[project-commit](docs/skills/project-commit/SKILL.md) を読み、適用してください。
-コミットメッセージの形式は、このリポジトリのスキルと
-[.gitmessage](.gitmessage) に従ってください。
