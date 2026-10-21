@@ -1,0 +1,4 @@
+[submodule "misskey"]
+	path = misskey
+	url = git@github-miwkey:mi-24v/misskey.git
+	branch = feature/notification-extension-server

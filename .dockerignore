@@ -1,0 +1,16 @@
+.git/
+.github/
+.agents/
+.ai/
+.claude/
+.codex/
+.idea/
+
+cdk.out/
+docs/
+misskey/
+node_modules/
+
+Dockerfile
+README.md
+changelog.md
