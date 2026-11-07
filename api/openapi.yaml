@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: Misskey Packed Notifications API
+  version: 0.1.0
+  description: API for managing Misskey notifications with CRUD operations
+tags:
+  - name: Notifications
+    description: Operations related to packed MiNotifications
+servers:
+  - url: /api/v1
+paths:
+  /notifications:
+    get:
+      summary: Get all notifications
+      tags:
+        - Notifications
+      operationId: getNotifications
+      parameters:
+        - name: userId
+          in: query
+          description: ID of the user for whom notifications are fetched
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of packed notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackedNotification'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create a notification
+      tags:
+        - Notifications
+      operationId: createNotification
+      requestBody:
+        description: Notification creation payload
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNotificationRequest'
+      responses:
+        '201':
+          description: Notification successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackedNotification'
+        '400':
+          description: Invalid input
+  /notifications/{notificationId}:
+    get:
+      summary: Get a specific notification
+      tags:
+        - Notifications
+      operationId: getNotification
+      parameters:
+        - name: notificationId
+          in: path
+          description: ID of the notification to retrieve
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A single packed notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackedNotification'
+        '404':
+          description: Notification not found
+    put:
+      summary: Update a notification
+      tags:
+        - Notifications
+      operationId: updateNotification
+      parameters:
+        - name: notificationId
+          in: path
+          description: ID of the notification to update
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Notification update payload
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotificationRequest'
+      responses:
+        '200':
+          description: Notification successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackedNotification'
+        '404':
+          description: Notification not found
+        '400':
+          description: Invalid input
+    delete:
+      summary: Delete a notification
+      tags:
+        - Notifications
+      operationId: deleteNotification
+      parameters:
+        - name: notificationId
+          in: path
+          description: ID of the notification to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Notification successfully deleted
+        '404':
+          description: Notification not found
+
+components:
+  schemas:
+    ID:
+      type: string
+      description: Unique identifier
+      
+    BaseNotification:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/ID'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of creation
+        notifierId:
+          $ref: '#/components/schemas/ID'
+          description: ID of the user who triggered the notification
+        isRead:
+          type: boolean
+          description: Whether the notification has been read
+          default: false
+    
+    NotificationType:
+      type: string
+      enum:
+        - follow
+        - mention
+        - reply
+        - renote
+        - quote
+        - reaction
+        - pollEnded
+        - receiveFollowRequest
+        - followRequestAccepted
+        - roleAssigned
+        - achievementEarned
+        - app
+        - test
+        - reaction:grouped
+        - renote:grouped
+      
+    FollowNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [follow]
+              
+    MentionNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [mention]
+            noteId:
+              $ref: '#/components/schemas/ID'
+              
+    ReplyNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [reply]
+            noteId:
+              $ref: '#/components/schemas/ID'
+              
+    RenoteNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [renote]
+            noteId:
+              $ref: '#/components/schemas/ID'
+              
+    QuoteNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [quote]
+            noteId:
+              $ref: '#/components/schemas/ID'
+              
+    ReactionNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [reaction]
+            noteId:
+              $ref: '#/components/schemas/ID'
+            reaction:
+              type: string
+              description: The reaction emoji or code
+              
+    PollEndedNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [pollEnded]
+            noteId:
+              $ref: '#/components/schemas/ID'
+              
+    ReceiveFollowRequestNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [receiveFollowRequest]
+              
+    FollowRequestAcceptedNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [followRequestAccepted]
+              
+    RoleAssignedNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [roleAssigned]
+            roleId:
+              $ref: '#/components/schemas/ID'
+              
+    AchievementEarnedNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [achievementEarned]
+            achievement:
+              type: string
+              description: The name of the achievement
+              
+    AppNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [app]
+            customBody:
+              type: string
+              description: App notification body
+            customHeader:
+              type: string
+              description: App notification header
+            customIcon:
+              type: string
+              description: App notification icon URL
+            appAccessTokenId:
+              type: string
+              description: App access token ID
+              
+    TestNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [test]
+              
+    GroupReactionNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [reaction:grouped]
+            noteId:
+              $ref: '#/components/schemas/ID'
+            reactions:
+              type: array
+              items:
+                type: object
+                properties:
+                  userId:
+                    $ref: '#/components/schemas/ID'
+                  reaction:
+                    type: string
+                    
+    GroupRenoteNotification:
+      allOf:
+        - $ref: '#/components/schemas/BaseNotification'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [renote:grouped]
+            noteId:
+              $ref: '#/components/schemas/ID'
+            userIds:
+              type: array
+              items:
+                $ref: '#/components/schemas/ID'
+                
+    PackedNotification:
+      oneOf:
+        - $ref: '#/components/schemas/FollowNotification'
+        - $ref: '#/components/schemas/MentionNotification'
+        - $ref: '#/components/schemas/ReplyNotification'
+        - $ref: '#/components/schemas/RenoteNotification'
+        - $ref: '#/components/schemas/QuoteNotification'
+        - $ref: '#/components/schemas/ReactionNotification'
+        - $ref: '#/components/schemas/PollEndedNotification'
+        - $ref: '#/components/schemas/ReceiveFollowRequestNotification'
+        - $ref: '#/components/schemas/FollowRequestAcceptedNotification'
+        - $ref: '#/components/schemas/RoleAssignedNotification'
+        - $ref: '#/components/schemas/AchievementEarnedNotification'
+        - $ref: '#/components/schemas/AppNotification'
+        - $ref: '#/components/schemas/TestNotification'
+        - $ref: '#/components/schemas/GroupReactionNotification'
+        - $ref: '#/components/schemas/GroupRenoteNotification'
+      discriminator:
+        propertyName: type
+        
+    CreateNotificationRequest:
+      oneOf:
+        - $ref: '#/components/schemas/FollowNotification'
+        - $ref: '#/components/schemas/MentionNotification'
+        - $ref: '#/components/schemas/ReplyNotification'
+        - $ref: '#/components/schemas/RenoteNotification'
+        - $ref: '#/components/schemas/QuoteNotification'
+        - $ref: '#/components/schemas/ReactionNotification'
+        - $ref: '#/components/schemas/PollEndedNotification'
+        - $ref: '#/components/schemas/ReceiveFollowRequestNotification'
+        - $ref: '#/components/schemas/FollowRequestAcceptedNotification'
+        - $ref: '#/components/schemas/RoleAssignedNotification'
+        - $ref: '#/components/schemas/AchievementEarnedNotification'
+        - $ref: '#/components/schemas/AppNotification'
+        - $ref: '#/components/schemas/TestNotification'
+        - $ref: '#/components/schemas/GroupReactionNotification'
+        - $ref: '#/components/schemas/GroupRenoteNotification'
+      discriminator:
+        propertyName: type
+        
+    UpdateNotificationRequest:
+      type: object
+      properties:
+        isRead:
+          type: boolean
+          description: Whether the notification has been read
