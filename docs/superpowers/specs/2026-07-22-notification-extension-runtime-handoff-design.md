@@ -169,7 +169,8 @@ The AWS deployment provides:
 - `TLS_CERT_SECRET_ARN` and `TLS_SERVER_NAME` to the extension container
 - `NOTIFICATION_EXTENSION_URL` to the Misskey container
 - `NOTIFICATION_EXTENSION_SECRET` to the Misskey container
-- an internal Service Connect endpoint named `miwkey-extension` on port 8080
+- an internal Service Connect endpoint on port 8080 whose `clientAliases.dnsName`
+  is the certificate SAN FQDN, also used as `TLS_SERVER_NAME`
 
 The extension server continues to listen on port 8080 with TLS 1.2 or later by
 default. Missing TLS settings, invalid mode values or certificate validation
@@ -183,8 +184,10 @@ SAN, validity period and chain to system roots before serving. Emit one
 non-secret JSON certificate record after successful TLS configuration and
 listener bind, as specified in the AWS design section 3.3.
 
-The Misskey fork uses an internal HTTPS origin in production and signs requests
-with short-lived HS256 JWTs using the shared secret. Keep the dedicated client
+The Misskey fork uses `https://<extension-fqdn>:8080` in production. The URL
+hostname must match the certificate SAN FQDN and `TLS_SERVER_NAME`; the short
+service name `miwkey-extension` is not a substitute for that hostname. It signs
+requests with short-lived HS256 JWTs using the shared secret. Keep the dedicated client
 from `f68926918fb8950d4a642ed564bed189a6740f19` together with the Node 22.23.4
 security update from `a645fc53522177b5b7c43610fa11cbc82cb0bdd8` when resolving
 the gitlink. Pin a commit containing both histories: either previous tip alone
