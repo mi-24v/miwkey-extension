@@ -86,4 +86,4 @@ CI の実行内容は [.github/workflows/test.yml](.github/workflows/test.yml) �
 - 起動設定、連携、ヘルスチェック、ログ、イメージ公開の設計は
   [Runtime Handoff Design](docs/superpowers/specs/2026-07-22-notification-extension-runtime-handoff-design.md) を参照する。
   実装状況や実行コマンドは、現在のコードと workflow でも確認する。
-- TLS の現行契約は、`miwkey-aws/docs/superpowers/specs/2026-07-22-notification-extension-aws-integration-design.md` の §3.3（TLS と起動ログ）・§3.4（Misskey 専用クライアント）を参照する。
+- TLS の現行契約は、miwkey-aws 仕様書の [§3.3（TLS と起動ログ）](https://github.com/mi-24v/miwkey-aws/blob/ac6654b8c12e650f94067d211da5809a962557e5/docs/specs/notification-extension-aws-integration-design.md#L89)・[§3.4（Misskey 専用クライアント）](https://github.com/mi-24v/miwkey-aws/blob/ac6654b8c12e650f94067d211da5809a962557e5/docs/specs/notification-extension-aws-integration-design.md#L100) を参照する。

@@ -5,10 +5,12 @@
 - Repository: `miwkey-extension`
 
 TLS clarification (2026-11-19): the original HTTP-only assumptions in sections
-5 and 9 are superseded for the TLS runtime by section 3.3 of
-`miwkey-aws/docs/superpowers/specs/2026-07-22-notification-extension-aws-integration-design.md`.
+5 and 9 are superseded for the TLS runtime by
+[section 3.3 of the AWS integration design](https://github.com/mi-24v/miwkey-aws/blob/ac6654b8c12e650f94067d211da5809a962557e5/docs/specs/notification-extension-aws-integration-design.md#L89).
 That section defines the TLS certificate, startup-log and health-check contract;
-section 3.4 defines the dedicated Misskey client. The original date and status
+[section 3.4](https://github.com/mi-24v/miwkey-aws/blob/ac6654b8c12e650f94067d211da5809a962557e5/docs/specs/notification-extension-aws-integration-design.md#L100)
+defines the dedicated Misskey client. Both references are pinned to the published
+commit `ac6654b8c12e650f94067d211da5809a962557e5`. The original date and status
 above describe the handoff design, not a new approval of this clarification.
 The other responsibilities and verification requirements remain in scope.
 
