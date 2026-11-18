@@ -66,7 +66,7 @@ CI の実行内容は [.github/workflows/test.yml](.github/workflows/test.yml) �
 - `GET /healthz` は認証なしで `204` を返す。通知データへのアクセスを追加しない。
   コンテナは distroless のため、ヘルスチェックはバイナリの `healthcheck` サブコマンドを使う。
   TLS モードの `healthcheck` は `127.0.0.1:8080` へ `TLS_SERVER_NAME` を `ServerName` にして接続し、
-  標準ルートで証明書を検証する。証明書 secret は読まない。
+  標準ルートで証明書を検証する。証明書シークレットは読まない。
 - ログは stdout/stderr に出す。通知本文、DynamoDB のアイテム内容、JWT、Authorization ヘッダー、
   共有シークレットをログに含めない。
 
@@ -86,3 +86,4 @@ CI の実行内容は [.github/workflows/test.yml](.github/workflows/test.yml) �
 - 起動設定、連携、ヘルスチェック、ログ、イメージ公開の設計は
   [Runtime Handoff Design](docs/superpowers/specs/2026-07-22-notification-extension-runtime-handoff-design.md) を参照する。
   実装状況や実行コマンドは、現在のコードと workflow でも確認する。
+- TLS の現行契約は、`miwkey-aws/docs/superpowers/specs/2026-07-22-notification-extension-aws-integration-design.md` の §3.3（TLS と起動ログ）・§3.4（Misskey 専用クライアント）を参照する。
