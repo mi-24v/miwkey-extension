@@ -148,9 +148,11 @@ func handleHealthz(c echo.Context) error {
 // newServer serves TLS when tlsConfig is set and plain HTTP otherwise.
 func newServer(handler http.Handler, tlsConfig *tls.Config) *http.Server {
 	return &http.Server{
-		Addr:      listenAddr,
-		Handler:   handler,
-		TLSConfig: tlsConfig,
+		Addr:              listenAddr,
+		Handler:           handler,
+		TLSConfig:         tlsConfig,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 }
 
