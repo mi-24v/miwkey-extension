@@ -4,6 +4,16 @@
 - Status: Approved for implementation in a separate session
 - Repository: `miwkey-extension`
 
+TLS clarification (2026-11-19): the original HTTP-only assumptions in sections
+5 and 9 are superseded for the TLS runtime by
+[section 3.3 of the AWS integration design](https://github.com/mi-24v/miwkey-aws/blob/ac6654b8c12e650f94067d211da5809a962557e5/docs/specs/notification-extension-aws-integration-design.md#L89).
+That section defines the TLS certificate, startup-log and health-check contract;
+[section 3.4](https://github.com/mi-24v/miwkey-aws/blob/ac6654b8c12e650f94067d211da5809a962557e5/docs/specs/notification-extension-aws-integration-design.md#L100)
+defines the dedicated Misskey client. Both references are pinned to the published
+commit `ac6654b8c12e650f94067d211da5809a962557e5`. The original date and status
+above describe the handoff design, not a new approval of this clarification.
+The other responsibilities and verification requirements remain in scope.
+
 ## 1. Goal
 
 Prepare the extension server and the embedded Misskey fork for the internal AWS
@@ -97,11 +107,15 @@ and no application data. It must not require a JWT.
 
 The runtime image is distroless, so do not depend on `curl`, `wget`, or a shell
 for the container health check. Add a health-check mode to the extension binary
-or another self-contained mechanism that performs an HTTP request to
-`127.0.0.1:8080/healthz` and exits nonzero on failure.
+that requests `127.0.0.1:8080/healthz` and exits nonzero on failure. TLS is the
+default: connect over HTTPS with SNI `TLS_SERVER_NAME` and verify the certificate
+against the system roots, including its name and validity period. Do not fetch
+the certificate secret in health-check mode. Plain HTTP is only for explicit
+local-development mode (`TLS_MODE=http`).
 
 The health endpoint must not inspect or mutate notification data. Its purpose is
-to confirm that the process is ready to accept HTTP requests.
+to confirm that the process is ready to accept requests; it returns 204 without
+checking the database.
 
 ## 6. Logging Contract
 
@@ -152,10 +166,29 @@ The AWS deployment provides:
 
 - `AUTH_SECRET` to the extension container
 - `DYNAMODB_NOTIFICATION_TABLE` to the extension container
+- `TLS_CERT_SECRET_ARN` and `TLS_SERVER_NAME` to the extension container
 - `NOTIFICATION_EXTENSION_URL` to the Misskey container
 - `NOTIFICATION_EXTENSION_SECRET` to the Misskey container
-- an internal Service Connect endpoint named `miwkey-extension` on port 8080
+- an internal Service Connect endpoint on port 8080 whose `clientAliases.dnsName`
+  is the certificate SAN FQDN, also used as `TLS_SERVER_NAME`
 
-The extension server continues to listen on port 8080. The Misskey fork treats
-the URL as an internal HTTP endpoint and signs requests with short-lived HS256
-JWTs using the shared secret.
+The extension server continues to listen on port 8080 with TLS 1.2 or later by
+default. Missing TLS settings, invalid mode values or certificate validation
+failures stop startup without falling back to HTTP. Explicit `TLS_MODE=http`
+is only for local development.
+
+The certificate is loaded from Secrets Manager's explicit `AWSCURRENT` version
+at startup with a bounded timeout. The JSON fields are `certificatePem`
+(full chain) and `privateKeyPem`; both stay in memory. Verify the key pair,
+SAN, validity period and chain to system roots before serving. Emit one
+non-secret JSON certificate record after successful TLS configuration and
+listener bind, as specified in the AWS design section 3.3.
+
+The Misskey fork uses `https://<extension-fqdn>:8080` in production. The URL
+hostname must match the certificate SAN FQDN and `TLS_SERVER_NAME`; the short
+service name `miwkey-extension` is not a substitute for that hostname. It signs
+requests with short-lived HS256 JWTs using the shared secret. Keep the dedicated client
+from `f68926918fb8950d4a642ed564bed189a6740f19` together with the Node 22.23.4
+security update from `a645fc53522177b5b7c43610fa11cbc82cb0bdd8` when resolving
+the gitlink. Pin a commit containing both histories: either previous tip alone
+loses a required change. HTTP origins remain a local fallback only.
