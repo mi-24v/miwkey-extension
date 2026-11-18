@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -29,7 +28,7 @@ import (
 const testServerName = "ext.example.test"
 
 func TestServerClosesStalledConnections(t *testing.T) {
-	for _, scenario := range []string{"TLS handshake", "HTTP headers", "idle keep-alive"} {
+	for _, scenario := range []string{"TLS handshake", "HTTP headers"} {
 		t.Run(scenario, func(t *testing.T) {
 			var cfg *tls.Config
 			if scenario == "TLS handshake" {
@@ -41,7 +40,6 @@ func TestServerClosesStalledConnections(t *testing.T) {
 			// Scale the production deadlines down for a quick behavioral test.
 			// An unset deadline stays zero and leaves the connection open.
 			srv.ReadHeaderTimeout /= 100
-			srv.IdleTimeout /= 100
 			ln, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err)
 			done := make(chan error, 1)
@@ -58,13 +56,6 @@ func TestServerClosesStalledConnections(t *testing.T) {
 			case "HTTP headers":
 				_, err = io.WriteString(conn, "GET /healthz HTTP/1.1\r\nHost: localhost\r\n")
 				require.NoError(t, err)
-			case "idle keep-alive":
-				_, err = io.WriteString(conn, "GET /healthz HTTP/1.1\r\nHost: localhost\r\n\r\n")
-				require.NoError(t, err)
-				res, err := http.ReadResponse(bufio.NewReader(conn), nil)
-				require.NoError(t, err)
-				require.Equal(t, http.StatusNoContent, res.StatusCode)
-				require.NoError(t, res.Body.Close())
 			}
 			_, err = io.ReadAll(conn)
 			assert.NoError(t, err, "server must close the stalled connection before the client deadline")

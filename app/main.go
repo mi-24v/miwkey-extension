@@ -152,7 +152,6 @@ func newServer(handler http.Handler, tlsConfig *tls.Config) *http.Server {
 		Handler:           handler,
 		TLSConfig:         tlsConfig,
 		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       60 * time.Second,
 	}
 }
 
